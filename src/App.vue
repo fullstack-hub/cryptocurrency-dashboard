@@ -1,32 +1,61 @@
 <template>
-  <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div>
-    <router-view />
-  </div>
+    <v-app>
+        <v-app-bar app dark>
+            <div class="d-flex align-center">
+                <v-img
+                    alt="Vuetify Logo"
+                    class="shrink mr-2"
+                    contain
+                    src="@/assets/btc.png"
+                    transition="scale-transition"
+                    width="40"
+                />
+
+                <span class="mr-2">나는 100억 부자될거야</span>
+            </div>
+
+            <v-spacer></v-spacer>
+
+            <v-btn
+                href="https://github.com/vuetifyjs/vuetify/releases/latest"
+                target="_blank"
+                text
+            >
+                <span class="mr-2">Latest Release</span>
+                <v-icon>mdi-open-in-new</v-icon>
+            </v-btn>
+        </v-app-bar>
+
+        <v-main>
+            <Dashboard />
+        </v-main>
+    </v-app>
 </template>
 
-<style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
+<script lang="ts">
+import Vue from 'vue'
+import Dashboard from '@/components/Dashboard.vue'
 
-#nav {
-  padding: 30px;
+export default Vue.extend({
+    name: 'App',
+    components: {
+        Dashboard,
+    },
 
-  a {
-    font-weight: bold;
-    color: #2c3e50;
+    data: () => ({
+        //
+    }),
+})
+</script>
 
-    &.router-link-exact-active {
-      color: #42b983;
-    }
-  }
-}
+<style>
+@import '../node_modules/@syncfusion/ej2-base/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-buttons/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-calendars/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-dropdowns/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-inputs/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-navigations/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-popups/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-splitbuttons/styles/material-dark.css';
+@import '../node_modules/@syncfusion/ej2-vue-grids/styles/material-dark.css';
 </style>
