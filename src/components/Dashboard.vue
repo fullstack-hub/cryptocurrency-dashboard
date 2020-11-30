@@ -1,5 +1,5 @@
 <template>
-    <v-container :grid-list-md="!$vuetify.breakpoint.xs">
+    <v-container fluid :grid-list-md="!$vuetify.breakpoint.xs">
         <v-layout column>
             <v-flex>
                 <v-layout>
@@ -13,7 +13,11 @@
                             >
                                 {{ exchangeRate[i - 1].symbol }}
                             </v-chip>
-                            {{ exchangeRate[i - 1].price }}
+                            {{
+                                numeral(exchangeRate[i - 1].price).format(
+                                    '0,0.00'
+                                )
+                            }}
                         </v-card>
                     </v-flex>
                 </v-layout>
@@ -27,18 +31,52 @@
                             :items="items"
                         >
                             <template #[`item.askPrice`]="{ item }">
-                                <div class="red--text text--lighten-2">
-                                    {{ item.askPrice.toFixed(2) }}
-                                </div>
+                                <template
+                                    v-if="
+                                        item.symbol.toString().includes('KRW')
+                                    "
+                                >
+                                    <div class="red--text text--lighten-2">
+                                        {{
+                                            numeral(item.askPrice).format('0,0')
+                                        }}
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="red--text text--lighten-2">
+                                        {{
+                                            numeral(item.askPrice).format(
+                                                '0,0.00'
+                                            )
+                                        }}
+                                    </div>
+                                </template>
                             </template>
                             <template #[`item.bidPrice`]="{ item }">
-                                <div class="green--text text--lighten-2">
-                                    {{ item.bidPrice.toFixed(2) }}
-                                </div>
+                                <template
+                                    v-if="
+                                        item.symbol.toString().includes('KRW')
+                                    "
+                                >
+                                    <div class="green--text text--lighten-2">
+                                        {{
+                                            numeral(item.bidPrice).format('0,0')
+                                        }}
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="green--text text--lighten-2">
+                                        {{
+                                            numeral(item.bidPrice).format(
+                                                '0,0.00'
+                                            )
+                                        }}
+                                    </div>
+                                </template>
                             </template>
                             <template #[`item.premium`]="{ item }">
                                 <template v-if="item.premium >= 0.25">
-                                    <div class="blue--text text--lighten-2">
+                                    <div class="red--text text--lighten-2">
                                         <strong>
                                             {{
                                                 numeral(item.premium).format(
@@ -54,9 +92,31 @@
                                     }}
                                 </template>
                                 <template v-else>
-                                    <div class="red--text text--lighten-2">
+                                    <div class="blue--text text--lighten-2">
                                         {{
                                             numeral(item.premium).format(
+                                                '0.0000%'
+                                            )
+                                        }}
+                                    </div>
+                                </template>
+                            </template>
+                            <template #[`item.profitRate`]="{ item }">
+                                <template v-if="item.profitRate > 0">
+                                    <div class="red--text text--lighten-2">
+                                        <strong>
+                                            {{
+                                                numeral(item.profitRate).format(
+                                                    '0.0000%'
+                                                )
+                                            }}
+                                        </strong>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="blue--text text--lighten-2">
+                                        {{
+                                            numeral(item.profitRate).format(
                                                 '0.0000%'
                                             )
                                         }}
@@ -68,7 +128,44 @@
                 </v-flex>
                 <v-flex>
                     <v-card height="800">
-                        <v-data-table dense :headers="premiumHistoryHeaders">
+                        <v-data-table
+                            dense
+                            :headers="premiumHistoryHeaders"
+                            :items="premiumHistory"
+                        >
+                            <template #[`item.minProfitRate`]="{ item }">
+                                {{
+                                    numeral(item.minProfitRate).format(
+                                        '0.0000%'
+                                    )
+                                }}
+                            </template>
+                            <template #[`item.maxProfitRate`]="{ item }">
+                                {{
+                                    numeral(item.maxProfitRate).format(
+                                        '0.0000%'
+                                    )
+                                }}
+                            </template>
+                            <template #[`item.minQuantity`]="{ item }">
+                                {{ numeral(item.minQuantity).format('0.0000') }}
+                            </template>
+                            <template #[`item.maxQuantity`]="{ item }">
+                                {{ numeral(item.maxQuantity).format('0.0000') }}
+                            </template>
+
+                            <template #[`item.beginTimestamp`]="{ item }">
+                                {{
+                                    moment(item.beginTimestamp).format(
+                                        'HH:mm:ss'
+                                    )
+                                }}
+                            </template>
+                            <template #[`item.endTimestamp`]="{ item }">
+                                {{
+                                    moment(item.endTimestamp).format('HH:mm:ss')
+                                }}
+                            </template>
                         </v-data-table>
                     </v-card>
                 </v-flex>
@@ -80,12 +177,14 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import _ from 'lodash'
-import PremiumDto from '@/dto/premium'
+import PremiumStatusDto from '@/dto/premiumStatusDto'
+import PremiumHistoryDto from '@/dto/premiumHistoryDto'
 
 @Component({})
 export default class Dashboard extends Vue {
     private PROFIT_RATE: number = 0.25
-    private items: PremiumDto[] = []
+    private items: PremiumStatusDto[] = []
+    private premiumHistory: PremiumHistoryDto[] = []
     private socket = new WebSocket('ws://localhost:8080/ws')
 
     private exchangeRate = [
@@ -100,17 +199,20 @@ export default class Dashboard extends Vue {
         { text: 'ASK PRICE', value: 'askPrice' },
         { text: 'SELL', value: 'sellExchange' },
         { text: 'BID PRICE', value: 'bidPrice' },
-        { text: 'PREMIUM(%)', value: 'premium' },
+        { text: 'PREMIUM', value: 'premium' },
+        { text: 'PROFIT', value: 'profitRate' },
     ]
 
     private premiumHistoryHeaders = [
         { text: 'SYMBOL', value: 'symbol' },
-        { text: 'BUY', value: 'buyExchange' },
-        { text: 'SELL', value: 'sellExchange' },
-        { text: 'MIN PREMIUM', value: 'minPremium' },
-        { text: 'MAX PREMIUM', value: 'maxPremium' },
-        { text: 'BEGIN', value: 'beginDate' },
-        { text: 'END', value: 'endDate' },
+        { text: 'BUY', value: 'askExchange' },
+        { text: 'SELL', value: 'bidExchange' },
+        { text: 'MIN PROFIT', value: 'minProfitRate' },
+        { text: 'MAX PROFIT', value: 'maxProfitRate' },
+        { text: 'MIN QUANTITY', value: 'minQuantity' },
+        { text: 'MAX QUANTITY', value: 'maxQuantity' },
+        { text: 'BEGIN', value: 'beginTimestamp' },
+        { text: 'END', value: 'endTimestamp' },
     ]
 
     public constructor() {
@@ -130,13 +232,16 @@ export default class Dashboard extends Vue {
         switch (msg.type) {
             case 'premium-status':
                 {
-                    const dto: PremiumDto = {
+                    console.log(msg)
+
+                    const dto: PremiumStatusDto = {
                         symbol: msg.data.symbol,
                         buyExchange: msg.data.buyExchange,
                         askPrice: parseFloat(msg.data.askPrice),
                         sellExchange: msg.data.sellExchange,
                         bidPrice: parseFloat(msg.data.bidPrice),
                         premium: parseFloat(msg.data.premium),
+                        profitRate: parseFloat(msg.data.profitRate),
                     }
                     this.updatePremiumStatus(dto)
                 }
@@ -151,10 +256,33 @@ export default class Dashboard extends Vue {
                     }
                 }
                 break
+            case 'premium-history':
+                {
+                    this.addPremiumHistory({
+                        symbol: msg.data.symbol,
+                        bidExchange: msg.data.bidExchange,
+                        askExchange: msg.data.askExchange,
+                        minPremium: parseFloat(msg.data.minPremium),
+                        maxPremium: parseFloat(msg.data.maxPremium),
+                        minQuantity: parseFloat(msg.data.minQuantity),
+                        maxQuantity: parseFloat(msg.data.maxQuantity),
+                        minProfitRate: parseFloat(msg.data.minProfitRate),
+                        maxProfitRate: parseFloat(msg.data.maxProfitRate),
+                        beginTimestamp: new Date(
+                            msg.data.beginTimestamp * 1000
+                        ),
+                        endTimestamp: new Date(msg.data.endTimestamp * 1000),
+                    })
+                }
+                break
         }
     }
 
-    private updatePremiumStatus(dto: PremiumDto) {
+    private addPremiumHistory(dto: PremiumHistoryDto) {
+        this.premiumHistory.push(dto)
+    }
+
+    private updatePremiumStatus(dto: PremiumStatusDto) {
         const item = _.find(this.items, {
             symbol: dto.symbol,
             buyExchange: dto.buyExchange,
@@ -162,6 +290,7 @@ export default class Dashboard extends Vue {
         })
         if (item) {
             item.premium = dto.premium
+            item.profitRate = dto.profitRate
             item.askPrice = dto.askPrice
             item.bidPrice = dto.bidPrice
         } else {
